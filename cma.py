@@ -2,7 +2,9 @@
 # -*- coding: utf-8 -*-
 
 import gdb
-import os, signal, ConfigParser, time, signal, re
+import os, signal, time, signal, re
+from six.moves import configparser
+
 
 #-----------------------------------------------------------------------
 # The language class
@@ -13,59 +15,59 @@ class Lang(object):
         self.language = language
         self.is_set = False
         self.add("Please Input the file for record info:[%s]",
-                 "请输入记录信息的文件名:[%s]")
+                "请输入记录信息的文件名:[%s]")
         self.add('Cannot write "%s".',
-                 '不能写"%s".')
+                '不能写"%s".')
         self.add("Record the infomation of released memory?",
-                 "记录释放掉的内存的信息？")
+                "记录释放掉的内存的信息？")
         self.add("Record backtrace infomation?",
-                 "记录backtrace信息？")
+                "记录backtrace信息？")
         self.add("Type",
-                 "类型")
+                "类型")
         self.add("Address",
-                 "地址")
+                "地址")
         self.add("Size",
-                 "长度")
+                "长度")
         self.add("Existence time(sec)",
-                 "存在时间(秒)")
+                "存在时间(秒)")
         self.add("Allocate line",
-                 "分配行")
+                "分配行")
         self.add("Release line",
-                 "释放行")
+                "释放行")
         self.add("Allocate backtrace",
-                 "分配backtrace")
+                "分配backtrace")
         self.add("Release backtrace",
-                 "释放backtrace")
+                "释放backtrace")
         self.add('Record memory infomation to "%s".',
-                 '记录内存信息到“%s”。')
+                '记录内存信息到“%s”。')
         self.add("Continue.",
-                 "继续。")
+                "继续。")
         self.add('Quit and record memory infomation to "%s".',
-                 '退出并记录内存信息到“%s”。')
+                '退出并记录内存信息到“%s”。')
         self.add("Which operation?",
-                 "哪个操作？")
+                "哪个操作？")
         self.add("Inferior exec failed:",
-                 "被调试程序执行出错：")
+                "被调试程序执行出错：")
         self.add('Memory infomation saved into "%s".',
-                 '内存信息存入“%s”。')
+                '内存信息存入“%s”。')
         self.add('File for record info is "%s".',
-                 '记录文件是“%s”。')
+                '记录文件是“%s”。')
         self.add('Script will record infomation of released memory.',
-                 '脚本将记录已经被释放掉的内存信息。')
+                '脚本将记录已经被释放掉的内存信息。')
         self.add('Script will not record infomation of released memory.',
-                 '脚本将不记录已经被释放掉的内存信息。')
+                '脚本将不记录已经被释放掉的内存信息。')
         self.add('Script will backtrace infomation.',
-                 '脚本将记录backtrace信息。')
+                '脚本将记录backtrace信息。')
         self.add('Script will not backtrace infomation.',
-                 '脚本将不记录backtrace信息。')
+                '脚本将不记录backtrace信息。')
         self.add("Do you want to record memory function malloc/calloc/realloc/free?",
-                 '是否记录内存函数malloc/calloc/realloc/free？')
+                '是否记录内存函数malloc/calloc/realloc/free？')
         self.add("Do you want to record memory function new/delete?",
-                 '是否记录内存函数new/delete？')
+                '是否记录内存函数new/delete？')
         self.add("Do you want to record memory function kmalloc/kfree?",
-                 '是否记录内存函数kmalloc/kfree？')
+                '是否记录内存函数kmalloc/kfree？')
         self.add("Cannot find any dynamic memory allocate functions.",
-                 "无法找到任何动态内存分配函数。")
+                "无法找到任何动态内存分配函数。")
 
     def set_language(self, language):
         if language != "":
@@ -94,7 +96,7 @@ def yes_no(string="", has_default=False, default_answer=True):
     else:
         default_str = " Yes/No:"
     while True:
-        s = raw_input(string + default_str)
+        s = input(string + default_str)
         if len(s) == 0:
             if has_default:
                 return default_answer
@@ -105,25 +107,17 @@ def yes_no(string="", has_default=False, default_answer=True):
             return True
 
 def select_from_list(entry_list, default_entry, introduction):
-    if type(entry_list) == dict:
-        entry_dict = entry_list
-        entry_list = list(entry_dict.keys())
-        entry_is_dict = True
-    else:
-        entry_is_dict = False
     while True:
         default = -1
         default_str = ""
         for i in range(0, len(entry_list)):
-            if entry_is_dict:
-                print("[%d] %s %s" %(i, entry_list[i], entry_dict[entry_list[i]]))
-            else:
-                print("[%d] %s" %(i, entry_list[i]))
+            
+            print("[%d] %s" %(i, entry_list[i]))
             if default_entry != "" and entry_list[i] == default_entry:
                 default = i
                 default_str = "[%d]" %i
         try:
-            select = input(introduction + default_str)
+            select = eval(input(introduction + default_str))
         except SyntaxError:
             select = default
         except Exception:
@@ -148,9 +142,9 @@ def config_check_show(section, option, callback, show1=None, show2=None):
             print (show1 %Config.get(section, option))
         else:
             if Config.get(section, option) == "True":
-                print show1
+                print (show1)
             else:
-                print show2
+                print (show2)
 #-----------------------------------------------------------------------
 def get_info_line(current):
     ret = ""
@@ -210,7 +204,7 @@ def file_header_init():
 # Format: size, line, time, memtype, [bt]
 not_released = {}
 
-def not_released_add(addr, size, memtype, line=None, bt=None):
+def not_released_add(addr, size:int, memtype, line=None, bt=None):
     global not_released
 
     if addr == 0:
@@ -221,7 +215,8 @@ def not_released_add(addr, size, memtype, line=None, bt=None):
             line = get_info_line(True)
         if bt == None:
             bt = str(gdb.execute("backtrace", True, True)).strip()
-        print(lang.string("Error in not_released_add addr 0x%x old: %s new: %d, %s, %s, %s.  Please report this message to https://github.com/teawater/cma/issues/.") %(addr, not_released[addr], size, memtype, line, bt))
+        print(size, type(size))
+        print(lang.string("Error in not_released_add addr 0x%x old: %s new: %d, %s, %s, %s.  Please report this message to https://github.com/teawater/cma/issues/.") %(eval(addr), not_released[addr], size, memtype, line, bt))
 
     not_released[addr] = []
     not_released[addr].append(size)
@@ -254,7 +249,7 @@ def released_add(addr, memtype, line=None, bt=None):
             if not_released[addr][3] != memtype:
                 if bt == None:
                     bt = str(gdb.execute("backtrace", True, True)).strip()
-                print(lang.string("Error in released_add addr 0x%x old: %s new: %s, %s, %s.  Please report this message to https://github.com/teawater/cma/issues/.") %(addr, not_released[addr], memtype, line, bt))
+                print(lang.string("Error in released_add addr 0x%x old: %s new: %s, %s, %s.  Please report this message to https://github.com/teawater/cma/issues/.") %(eval(addr), not_released[addr], memtype, line, bt))
                 return
 
             add = [addr, not_released[addr][0], not_released[addr][1], line, cur_time - not_released[addr][2], not_released[addr][3]]
@@ -274,7 +269,7 @@ def sigint_handler(num=None, e=None):
 
     s_operations = (lang.string('Record memory infomation to "%s".') %record_dir,
                     lang.string("Continue."),
-                    lang.string('Quit and record memory infomation to "%s".') %record_dir)
+                    lang.string('Quit and record memory infomation to "%s".') %recorSd_dir)
     a = select_from_list(s_operations, s_operations[0], lang.string("Which operation?"))
     if a == s_operations[0]:
         record_save()
@@ -295,11 +290,11 @@ class arch_x86_32(object):
         if num > 1:
             raise Exception("get_arg %d is not supported." %num)
         gdb.execute("up", False, True)
-        ret = long(gdb.parse_and_eval("*(unsigned int *)($esp + " + str(num * 4) + ")"))
+        ret = str(gdb.parse_and_eval("*(unsigned int *)($esp + " + str(num * 4) + ")"))
         gdb.execute("down", False, True)
         return ret
     def get_ret(self):
-        return long(gdb.parse_and_eval("$eax"))
+        return str(gdb.parse_and_eval("$eax"))
 
 class arch_x86_64(object):
     def is_current(self):
@@ -308,13 +303,13 @@ class arch_x86_64(object):
         return False
     def get_arg(self, num):
         if num == 0:
-            return long(gdb.parse_and_eval("$rdi"))
+            return str(gdb.parse_and_eval("$rdi"))
         elif num == 1:
-            return long(gdb.parse_and_eval("$rsi"))
+            return str(gdb.parse_and_eval("$rsi"))
         else:
             raise Exception("get_arg %d is not supported." %num)
     def get_ret(self):
-        return long(gdb.parse_and_eval("$rax"))
+        return str(gdb.parse_and_eval("$rax"))
 
 class arch_arm(object):
     def is_current(self):
@@ -323,13 +318,13 @@ class arch_arm(object):
         return False
     def get_arg(self, num):
         if num == 0:
-            return long(gdb.parse_and_eval("$r0"))
+            return str(gdb.parse_and_eval("$r0"))
         elif num == 1:
-            return long(gdb.parse_and_eval("$r1"))
+            return str(gdb.parse_and_eval("$r1"))
         else:
             raise Exception("get_arg %d is not supported." %num)
     def get_ret(self):
-        return long(gdb.parse_and_eval("$r0"))
+        return str(gdb.parse_and_eval("$r0"))
 
 archs = (arch_x86_32, arch_x86_64, arch_arm)
 
@@ -339,7 +334,7 @@ def set_breakpoint(name):
     s = gdb.execute("b " + name, False, True)
     error_s = 'Function "' + name + '" not defined.'
     if s[:len(error_s)] == error_s:
-	return False
+        return False
     return True
 
 class BreakException(Exception):
@@ -354,7 +349,7 @@ class Break(object):
         '''
         got_break = False
         if not set_breakpoint(name):
-	    raise BreakException
+            raise BreakException
 
         self.name = name
         if res == None:
@@ -372,7 +367,7 @@ class Break(object):
 
 class Break_alloc(Break):
     def event(self):
-        size = arch.get_arg(0)
+        size = int(arch.get_arg(0))
         gdb.execute("disable", False, False)
         gdb.execute("finish", False, True)
         gdb.execute("enable", False, False)
@@ -380,7 +375,7 @@ class Break_alloc(Break):
 
 class Break_calloc(Break):
     def event(self):
-        size = arch.get_arg(0) * arch.get_arg(1)
+        size = int(arch.get_arg(0)) * int(arch.get_arg(1))
         gdb.execute("disable", False, False)
         gdb.execute("finish", False, True)
         gdb.execute("enable", False, False)
@@ -389,7 +384,7 @@ class Break_calloc(Break):
 class Break_realloc(Break):
     def event(self):
         released_add(arch.get_arg(0), self.memtype)
-        size = arch.get_arg(1)
+        size = int(arch.get_arg(1))
         gdb.execute("disable", False, False)
         gdb.execute("finish", False, True)
         gdb.execute("enable", False, False)
@@ -491,7 +486,7 @@ gdb.execute("set pagination off", False, False)
 # Do "start" if need.
 try:
     gdb.execute("info reg", True, True)
-except gdb.error, x:
+except gdb.error as x:
     if not set_breakpoint("main"):
         raise Exception("Function main is not available, please start the inferior and let GDB control it before execute the CMA.")
     gdb.execute("delete")
@@ -507,13 +502,13 @@ else:
 
 # Load config
 default_config_dir = os.path.realpath("./cma.conf")
-config_dir = raw_input("Please Input the config file:[" + default_config_dir + "]")
+config_dir = input("Please Input the config file:[" + default_config_dir + "]")
 if len(config_dir) == 0:
     config_dir = default_config_dir
-Config = ConfigParser.ConfigParser()
+Config = configparser.ConfigParser()
 try:
     Config.read(config_dir)
-except Exception, x:
+except Exception as x:
     try:
         config_write()
     except:
@@ -529,12 +524,12 @@ lang.set_language(Config.get("misc", "language"))
 def get_record_dir_callback():
     default = os.path.realpath("./cma.csv")
     while True:
-        ret = raw_input(lang.string("Please Input the file for record info:[%s]") %default)
+        ret = input(lang.string("Please Input the file for record info:[%s]") %default)
         if len(ret) == 0:
             ret = default
         ret = os.path.realpath(ret)
         try:
-            file(ret, "w")
+            open(ret, "w")
         except:
             print(lang.string('Cannot write "%s".') %ret)
             continue
@@ -568,7 +563,7 @@ while run:
     try:
         gdb.execute("continue", True)
         s = str(gdb.parse_and_eval("$pc"))
-    except gdb.error, x:
+    except gdb.error as x:
         if str(x) != 'No registers.':
             print(lang.string("Inferior exec failed:"), x)
         break
