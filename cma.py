@@ -177,7 +177,7 @@ def record_save():
     cur = time.time()
 
     for addr in not_released:
-        line = "'%s', '0x%x', '%d', '%f', '%s', ''" %(not_released[addr][3], addr, not_released[addr][0], cur - not_released[addr][2], not_released[addr][1])
+        line = "'%s', '0x%x', '%d', '%f', '%s', ''" %(not_released[addr][3], eval(addr), not_released[addr][0], cur - not_released[addr][2], not_released[addr][1])
         if record_bt:
             line += ", '%s', ''" %not_released[addr][4]
         line += "\n"
@@ -186,7 +186,7 @@ def record_save():
     f.write("\n")
 
     for e in released:
-        line = "'%s', '0x%x', '%d', '%f', '%s', '%s'" %(e[5], e[0], e[1], e[4], e[2], e[3])
+        line = "'%s', '0x%x', '%d', '%f', '%s', '%s'" %(e[5], eval(e[0]), e[1], e[4], e[2], e[3])
         if record_bt:
             line += ", '%s', '%s'" %(e[6], e[7])
         line += "\n"
@@ -269,7 +269,7 @@ def sigint_handler(num=None, e=None):
 
     s_operations = (lang.string('Record memory infomation to "%s".') %record_dir,
                     lang.string("Continue."),
-                    lang.string('Quit and record memory infomation to "%s".') %recorSd_dir)
+                    lang.string('Quit and record memory infomation to "%s".') %record_dir)
     a = select_from_list(s_operations, s_operations[0], lang.string("Which operation?"))
     if a == s_operations[0]:
         record_save()
@@ -546,7 +546,7 @@ record_released = bool(Config.get("misc", "record_released"))
 def get_record_bt_callback():
     return str(yes_no(lang.string("Record backtrace infomation?")))
 config_check_show("misc", "record_bt", get_record_bt_callback, lang.string('Script will backtrace infomation.'), lang.string('Script will not backtrace infomation.'))
-record_bt = bool(Config.get("misc", "record_bt"))
+record_bt = False
 config_write()
 
 file_header_init()
@@ -572,7 +572,6 @@ while run:
     if not bool(r):
         continue
     breaks[r.group(1)].event()
-
 record_save()
 
 gdb.events.stop.disconnect(inferior_sig_handler)
